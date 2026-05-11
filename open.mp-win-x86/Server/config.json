@@ -108,7 +108,7 @@
 			"sscanf"
 		],
         "main_scripts": [
-            "my_gamemode"
+            "auction-containers/auction-containers"
         ],
         "side_scripts": []
     },
