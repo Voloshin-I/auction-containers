@@ -84,20 +84,26 @@ public OnPlayerLeaveDynamicObject(playerid, objectid)
 forward OnPlayerEnterDynamicArea(playerid, areaid);
 public OnPlayerEnterDynamicArea(playerid, areaid){
     SendClientMessage(playerid, -1, "OnPlayerEnterDynamicArea");
-    for(new i = 0; i < MAX_CONTAINERS; i++){
-        if(containers[i][areaId] == areaid){
-            SendClientMessage(playerid, -1, "You are in container area");
-            ShowContainerDrawableForPlayer(playerid, i);
-            return 1;
-        }
+    new containerid = GetContainerIdByAreaId(playerid, areaid);
+    if (containerid == -1)
+    {
+        return 1;
     }
+
+    ShowContainerDrawableForPlayer(playerid, containerid);
     return 1;
 }
 
 forward OnPlayerLeaveDynamicArea(playerid, areaid);
 public OnPlayerLeaveDynamicArea(playerid, areaid)
 {
-    SendClientMessage(playerid, -1, "OnPlayerLeaveDynamicArea");
+    new containerid = GetContainerIdByAreaId(playerid, areaid);
+    if (containerid == -1)
+    {
+        return 1;
+    }
+
+    HideContainerDrawableForPlayer(playerid, containerid);
     return 1;
 }
 
@@ -139,7 +145,7 @@ GetContainers()
         containers[i][objectId] = CreateObject(containers[i][type], containers[i][x], containers[i][y], containers[i][z], 0.0, 0.0, 0.0);
 
         // Spawn container area
-        containers[i][areaId] = CreateDynamicSphere(containers[i][x], containers[i][y], containers[i][z], 5.0);
+        containers[i][areaId] = CreateDynamicSphere(containers[i][x], containers[i][y], containers[i][z], 7.0);
 
         containers[i][labelId] = Create3DTextLabel("Auction container", ContainerTextColor, containers[i][x], containers[i][y], containers[i][z] + 2, 50, 0);
 
@@ -148,4 +154,19 @@ GetContainers()
     
     cache_delete(result);
 	return 1;
+}
+
+forward GetContainerIdByAreaId(playerid, areaid);
+GetContainerIdByAreaId(playerid,areaid)
+{
+    for(new i = 0; i < MAX_CONTAINERS; i++){
+        if(containers[i][areaId] == areaid){
+            return i;
+        }
+    }
+
+    new str[64];
+    format(str, sizeof(str), "Container not found for area id: %d", areaid);
+    SendClientMessage(playerid, -1, str);
+    return -1;
 }
