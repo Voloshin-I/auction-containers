@@ -3,14 +3,23 @@
 #include <streamer>
 #include "constants.inc"
 
-new PlayerText:pAuctionTD[MAX_PLAYERS][MAX_CONTAINERS];
-forward ShowContainerDrawableForPlayer(playerid, containerid);
-ShowContainerDrawableForPlayer(playerid, containerid)
-{
+new PlayerText:drawables[MAX_PLAYERS][MAX_CONTAINERS];
+new bool:drawableVisible[MAX_PLAYERS][MAX_CONTAINERS];
 
+new auctionTimeLeft;
+
+forward UpdateAuctionTimeLeftForDrawables(timeLeft);
+UpdateAuctionTimeLeftForDrawables(timeLeft)
+{
+    auctionTimeLeft = timeLeft;
+}
+
+forward CreateContainerDrawableForPlayer(playerid, containerid);
+CreateContainerDrawableForPlayer(playerid, containerid)
+{
     // создаётся в OnPlayerConnect
     new PlayerText:playerTextDrawID = CreatePlayerTextDraw(playerid, 320.0, 200.0, "Auction");
-    pAuctionTD[playerid][containerid] = playerTextDrawID;
+    drawables[playerid][containerid] = playerTextDrawID;
     PlayerTextDrawAlignment(playerid, playerTextDrawID, TEXT_DRAW_ALIGN_CENTER);
     PlayerTextDrawColour(playerid, playerTextDrawID, 0xFFFFFFFF);
     PlayerTextDrawBackgroundColour(playerid, playerTextDrawID, 0x000000FF);
@@ -18,26 +27,47 @@ ShowContainerDrawableForPlayer(playerid, containerid)
     PlayerTextDrawBoxColour(playerid, playerTextDrawID, 0x00000088);
     PlayerTextDrawTextSize(playerid,playerTextDrawID, 200.0, 20.0);
 
-    // показать игроку
-    PlayerTextDrawShow(playerid, playerTextDrawID);
-
-    // обновить текст только у этого игрока
-    PlayerTextDrawSetString(playerid, playerTextDrawID, "Timer: 59");
-    PlayerTextDrawShow(playerid, playerTextDrawID); // после SetString нужно перепоказать
-
+    drawableVisible[playerid][containerid] = false;
     return 1;
 }
 
-forward UpdateContainerDrawableForPlayer(playerid, containerid);
-UpdateContainerDrawableForPlayer(playerid, containerid)
+forward ShowContainerDrawableForPlayer(playerid, containerid, timer);
+ShowContainerDrawableForPlayer(playerid, containerid, timer)
 {
+    drawableVisible[playerid][containerid] = true;
+    UpdateContainerDrawableForPlayer(playerid, containerid, timer)
+    PlayerTextDrawShow(playerid, drawables[playerid][containerid]);
+
     return 1;
 }
 
+forward UpdateContainerDrawableForPlayer(playerid, containerid, timer);
+UpdateContainerDrawableForPlayer(playerid, containerid, timer)
+{
+    if (drawableVisible[playerid][containerid] == false)
+    {
+        return 1;
+    }
+
+    new str[TIMER_STRING_LENGTH];
+    FormatTimer(str);
+    PlayerTextDrawSetString(playerid, drawables[playerid][containerid], str);
+    return 1;
+}
 
 forward HideContainerDrawableForPlayer(playerid, containerid);
 HideContainerDrawableForPlayer(playerid, containerid)
 {
-    PlayerTextDrawHide(playerid, pAuctionTD[playerid][containerid]);
+    drawableVisible[playerid][containerid] = false;
+    PlayerTextDrawHide(playerid, drawables[playerid][containerid]);
     return 1;
+}
+
+FormatTimer(output[])
+{
+    new seconds = auctionTimeLeft;
+    new h = seconds / 3600;
+    new m = (seconds % 3600) / 60;
+    new s = seconds % 60;
+    format(output, TIMER_STRING_LENGTH, "%02d:%02d:%02d", h, m, s);
 }

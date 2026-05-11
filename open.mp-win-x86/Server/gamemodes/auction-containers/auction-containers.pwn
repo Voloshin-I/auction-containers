@@ -1,13 +1,12 @@
 #include <open.mp>
 #include <a_mysql>
 #include <streamer>
+//Global primary includes
 #include "constants.inc"
+#include "contracts.inc"
+// Rest includes depending on primary ingludes
+#include "auction-data.inc"
 #include "auction-player-drawable.inc"
-
-// Array length should be defined before compilation
-// Update MAX_CONTAINERS according to recors count in the database
-
-
 
 new MySQL:connId;
 
@@ -57,6 +56,7 @@ public OnGameModeInit()
     }	
 	
 	GetContainers();
+    StartAuction();
 	
     return 1;
 }
@@ -64,6 +64,10 @@ public OnGameModeInit()
 public OnPlayerConnect(playerid)
 {
     SendClientMessage(playerid, -1, "Hello from PAWN!");
+    for(new i = 0; i < MAX_CONTAINERS; i++)
+    {
+        CreateContainerDrawableForPlayer(playerid, i);
+    }
     return 1;
 }
 
@@ -169,4 +173,32 @@ GetContainerIdByAreaId(playerid,areaid)
     format(str, sizeof(str), "Container not found for area id: %d", areaid);
     SendClientMessage(playerid, -1, str);
     return -1;
+}
+
+OnAuctionTimerTick(secondsLeft)
+{
+    UpdateAuctionTimeLeftForDrawables(secondsLeft);
+    UpdateAllContainerDrawables();
+    return 1;
+}
+
+OnStakeUpdated(containerId, stake[E_STAKE])
+{
+    for(new i = 0; i < MAX_PLAYERS; i++)
+    {
+        UpdateContainerDrawableForPlayer(i, containerId, stake[value]);
+    }
+    return 1;
+}
+
+UpdateAllContainerDrawables()
+{
+    for(new i = 0; i < MAX_PLAYERS; i++)
+    {
+        for(new j = 0; j < MAX_CONTAINERS; j++)
+        {
+            UpdateContainerDrawableForPlayer(i, j, 0);
+        }
+    }
+    return 1;
 }
