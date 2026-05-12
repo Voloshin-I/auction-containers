@@ -12,11 +12,12 @@ StartAuction()
     gAuctionTimeLeft = AUCTION_COOLDOWN_SECONDS;
     for(new i = 0; i < MAX_CONTAINERS; i++)
     {
+        gTotalBids[i] = 0;
         for(new j = 0; j < MAX_PLAYERS; j++)
         {
-            gStakes[i][j] = 0;
+            gBids[i][j] = 0;
         }
-        OnStakeUpdated(i);
+        OnBidUpdated(i);
     }
 }
 
@@ -29,4 +30,12 @@ public AuctionTimerTick()
     {
         StartAuction()
     }
+}
+
+MakeBid(playerid, containerid, amount)
+{
+    gBids[containerid][playerid] += amount;
+    gTotalBids[containerid] += amount;
+    OnBidUpdated(containerid);
+    return 1;
 }

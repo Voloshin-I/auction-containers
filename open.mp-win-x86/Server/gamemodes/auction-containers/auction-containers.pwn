@@ -69,6 +69,7 @@ public OnPlayerConnect(playerid)
         CreateContainerDrawableForPlayer(playerid, i);
     }
 
+    GetPlayerName(playerid, gPlayerNames[playerid], MAX_PLAYER_NAME);
     GivePlayerMoney(playerid, 9999)
     return 1;
 }
@@ -127,6 +128,35 @@ public OnPlayerLeaveDynamicCP(playerid, checkpointid)
     return 1;
 }
 
+// ================================Dialogs===============================
+public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
+{
+    if (IsPlayerBidButton(playerid, playertextid))
+    {
+        ShowPlayerDialog(playerid, DIALOG_BID, DIALOG_STYLE_INPUT,
+            "Make a bid", "Enter bid amount:", "Bid", "Cancel");
+    }
+    return 1;
+}
+
+public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
+{
+    if (dialogid == DIALOG_BID)
+    {
+        if (response) // нажал "Bid"
+        {
+            new amount = strval(inputtext);
+            if (amount > 0)
+            {
+                new containerid = playerCurrentContainer[playerid];
+                MakeBid(playerid, containerid, amount);
+            }
+        }
+    }
+    return 1;
+}
+// ================================END Dialogs===============================
+
 forward GetContainers();
 GetContainers()
 {
@@ -183,7 +213,7 @@ OnAuctionTimerTick()
     return 1;
 }
 
-OnStakeUpdated(containerId)
+OnBidUpdated(containerId)
 {
     UpdateContainerDrawableForAllPlayers(containerId);
     return 1;
