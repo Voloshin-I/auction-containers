@@ -68,6 +68,14 @@ public OnPlayerConnect(playerid)
     {
         CreateContainerDrawableForPlayer(playerid, i);
     }
+
+    GivePlayerMoney(playerid, 9999)
+    return 1;
+}
+
+public OnPlayerDisconnect(playerid)
+{
+    OnPlayerDisconnectForDrawables(playerid);
     return 1;
 }
 
@@ -101,13 +109,7 @@ public OnPlayerEnterDynamicArea(playerid, areaid){
 forward OnPlayerLeaveDynamicArea(playerid, areaid);
 public OnPlayerLeaveDynamicArea(playerid, areaid)
 {
-    new containerid = GetContainerIdByAreaId(playerid, areaid);
-    if (containerid == -1)
-    {
-        return 1;
-    }
-
-    HideContainerDrawableForPlayer(playerid, containerid);
+    HideContainerDrawableForPlayer(playerid);
     return 1;
 }
 
@@ -175,19 +177,15 @@ GetContainerIdByAreaId(playerid,areaid)
     return -1;
 }
 
-OnAuctionTimerTick(secondsLeft)
+OnAuctionTimerTick()
 {
-    UpdateAuctionTimeLeftForDrawables(secondsLeft);
     UpdateAllContainerDrawables();
     return 1;
 }
 
-OnStakeUpdated(containerId, stake[E_STAKE])
+OnStakeUpdated(containerId)
 {
-    for(new i = 0; i < MAX_PLAYERS; i++)
-    {
-        UpdateContainerDrawableForPlayer(i, containerId, stake[value]);
-    }
+    UpdateContainerDrawableForAllPlayers(containerId);
     return 1;
 }
 
@@ -195,9 +193,9 @@ UpdateAllContainerDrawables()
 {
     for(new i = 0; i < MAX_PLAYERS; i++)
     {
-        for(new j = 0; j < MAX_CONTAINERS; j++)
+        if (IsPlayerConnected(i))
         {
-            UpdateContainerDrawableForPlayer(i, j, 0);
+            UpdateContainerDrawableForPlayer(i);
         }
     }
     return 1;

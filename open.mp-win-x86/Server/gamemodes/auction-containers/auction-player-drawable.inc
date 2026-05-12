@@ -1,23 +1,20 @@
-#include <open.mp>
-#include <a_mysql>
-#include <streamer>
-#include "constants.inc"
-
 new PlayerText:drawables[MAX_PLAYERS][MAX_CONTAINERS];
-new bool:drawableVisible[MAX_PLAYERS][MAX_CONTAINERS];
+new PlayerText:bidButtons[MAX_PLAYERS][MAX_CONTAINERS];
 
-new auctionTimeLeft;
-
-forward UpdateAuctionTimeLeftForDrawables(timeLeft);
-UpdateAuctionTimeLeftForDrawables(timeLeft)
-{
-    auctionTimeLeft = timeLeft;
-}
+new playerCurrentContainer[MAX_PLAYERS];
 
 forward CreateContainerDrawableForPlayer(playerid, containerid);
 CreateContainerDrawableForPlayer(playerid, containerid)
 {
-    // создаётся в OnPlayerConnect
+    CreateContainerDrawableInfoForPlayer(playerid, containerid);
+    CreateContainerBidButtonForPlayer(playerid, containerid);
+    return 1;
+}
+
+forward CreateContainerDrawableInfoForPlayer(playerid, containerid);
+CreateContainerDrawableInfoForPlayer(playerid, containerid)
+{
+    /*
     new PlayerText:playerTextDrawID = CreatePlayerTextDraw(playerid, 320.0, 200.0, "Auction");
     drawables[playerid][containerid] = playerTextDrawID;
     PlayerTextDrawAlignment(playerid, playerTextDrawID, TEXT_DRAW_ALIGN_CENTER);
@@ -26,25 +23,87 @@ CreateContainerDrawableForPlayer(playerid, containerid)
     PlayerTextDrawUseBox(playerid, playerTextDrawID, true);
     PlayerTextDrawBoxColour(playerid, playerTextDrawID, 0x00000088);
     PlayerTextDrawTextSize(playerid,playerTextDrawID, 200.0, 20.0);
+*/
+    //new PlayerText:td = CreatePlayerTextDraw(playerid, 500.0, 300.0, "Auction");
+    //new PlayerText:timerText = CreatePlayerTextDraw(playerid, 263.0, 150.0, "00:00:00");
+    new PlayerText:td = CreatePlayerTextDraw(playerid, 263.0, 150.0, "00:00:00");
+    PlayerTextDrawUseBox(playerid, td, true);
+    PlayerTextDrawBoxColour(playerid, td, 0x000000AA);
+    PlayerTextDrawTextSize(playerid, td, 377.0, 40.0);
+    PlayerTextDrawFont(playerid, td, TEXT_DRAW_FONT_1);
+    PlayerTextDrawColour(playerid, td, 0xFFFFFFFF);
 
-    drawableVisible[playerid][containerid] = false;
+    drawables[playerid][containerid] = td;
+
     return 1;
 }
 
-forward ShowContainerDrawableForPlayer(playerid, containerid, timer);
-ShowContainerDrawableForPlayer(playerid, containerid, timer)
+forward CreateContainerBidButtonForPlayer(playerid, containerid);
+CreateContainerBidButtonForPlayer(playerid, containerid)
 {
-    drawableVisible[playerid][containerid] = true;
-    UpdateContainerDrawableForPlayer(playerid, containerid, timer)
+    new PlayerText:btn = CreatePlayerTextDraw(playerid, 290.0, 200.0, "[ Make a bid ]");
+    PlayerTextDrawUseBox(playerid, btn, true);
+    PlayerTextDrawBoxColour(playerid, btn, 0xFF6600FF);
+    PlayerTextDrawTextSize(playerid, btn, 350.0, 15.0);
+    PlayerTextDrawFont(playerid, btn, TEXT_DRAW_FONT_2);
+    PlayerTextDrawColour(playerid, btn, 0xFFFFFFFF);
+    PlayerTextDrawSetSelectable(playerid, btn, true);
+
+    bidButtons[playerid][containerid] = btn;
+
+    return 1;
+}
+
+
+forward OnPlayerDisconnectForDrawables(playerid);
+OnPlayerDisconnectForDrawables(playerid)
+{
+    playerCurrentContainer[playerid] = -1;
+    for(new i = 0; i < MAX_PLAYERS; i++)
+    {
+        for(new j = 0; j < MAX_CONTAINERS; j++)
+        {
+            PlayerTextDrawDestroy(i, drawables[i][j]);
+            PlayerTextDrawDestroy(i, bidButtons[i][j]);
+        }
+    }
+    return 1;
+}
+
+forward ShowContainerDrawableForPlayer(playerid, containerid);
+ShowContainerDrawableForPlayer(playerid, containerid)
+{
+    if (playerCurrentContainer[playerid] != containerid)
+    {
+        HideContainerDrawableForPlayer(playerid);
+        playerCurrentContainer[playerid] = containerid;
+    }
+    UpdateContainerDrawableForPlayer(playerid)
+
     PlayerTextDrawShow(playerid, drawables[playerid][containerid]);
-
+    PlayerTextDrawShow(playerid, bidButtons[playerid][containerid]);
+    SelectTextDraw(playerid, 0xFFFFFFAA);
     return 1;
 }
 
-forward UpdateContainerDrawableForPlayer(playerid, containerid, timer);
-UpdateContainerDrawableForPlayer(playerid, containerid, timer)
+forward UpdateContainerDrawableForAllPlayers(containerid);
+UpdateContainerDrawableForAllPlayers(containerid)
 {
-    if (drawableVisible[playerid][containerid] == false)
+    for(new i = 0; i < MAX_PLAYERS; i++)
+    {
+        if (playerCurrentContainer[i] == containerid)
+        {
+            PlayerTextDrawShow(i, bidButtons[i][containerid]);
+        }
+    }
+    return 1;
+}
+
+forward UpdateContainerDrawableForPlayer(playerid);
+UpdateContainerDrawableForPlayer(playerid)
+{
+    new containerid = playerCurrentContainer[playerid];
+    if (containerid == -1)
     {
         return 1;
     }
@@ -55,17 +114,24 @@ UpdateContainerDrawableForPlayer(playerid, containerid, timer)
     return 1;
 }
 
-forward HideContainerDrawableForPlayer(playerid, containerid);
-HideContainerDrawableForPlayer(playerid, containerid)
+forward HideContainerDrawableForPlayer(playerid);
+HideContainerDrawableForPlayer(playerid)
 {
-    drawableVisible[playerid][containerid] = false;
+    new containerid = playerCurrentContainer[playerid];
+    if (containerid == -1)
+    {
+        return 1;
+    }
+    playerCurrentContainer[playerid] = -1;
     PlayerTextDrawHide(playerid, drawables[playerid][containerid]);
+    PlayerTextDrawHide(playerid, bidButtons[playerid][containerid]);
+    CancelSelectTextDraw(playerid);
     return 1;
 }
 
 FormatTimer(output[])
 {
-    new seconds = auctionTimeLeft;
+    new seconds = gAuctionTimeLeft;
     new h = seconds / 3600;
     new m = (seconds % 3600) / 60;
     new s = seconds % 60;
