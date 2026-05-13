@@ -58,11 +58,57 @@ ProduceAuctionResult(containerId)
     return 1;
 }
 
+CanMakeBid(playerid, containerid, amount)
+{
+    if (containerid < 0 || containerid >= MAX_CONTAINERS)
+    {
+        printf("[CanMakeBid] player %d invalid container slot %d", playerid, containerid);
+        SendClientMessage(playerid, 0xFF6666FF, "This container is not available.");
+        return 0;
+    }
+    if (containers[containerid][container_id] == -1)
+    {
+        printf("[CanMakeBid] player %d container %d not loaded", playerid, containerid);
+        SendClientMessage(playerid, 0xFF6666FF, "This container is not available.");
+        return 0;
+    }
+    if (amount <= 0)
+    {
+        printf("[CanMakeBid] player %d non-positive amount %d", playerid, amount);
+        SendClientMessage(playerid, 0xFF6666FF, "Bid amount must be greater than zero.");
+        return 0;
+    }
+    if (GetPlayerMoney(playerid) < amount)
+    {
+        printf("[CanMakeBid] player %d insufficient money (have %d, need %d)", playerid, GetPlayerMoney(playerid), amount);
+        SendClientMessage(playerid, 0xFF6666FF, "You do not have enough money for this bid.");
+        return 0;
+    }
+    new minFirst = containers[containerid][initial_price];
+    if (gTotalBids[containerid] == 0 && amount < minFirst)
+    {
+        new msg[96];
+        printf("[CanMakeBid] player %d first bid %d below starting price %d", playerid, amount, minFirst);
+        format(msg, sizeof(msg), "The first bid on this container must be at least $%d (starting price).", minFirst);
+        SendClientMessage(playerid, 0xFF6666FF, msg);
+        return 0;
+    }
+    return 1;
+}
+
 MakeBid(playerId, containerId, amount)
 {
+    if (!CanMakeBid(playerId, containerId, amount))
+    {
+        OnPlayerBidFail(playerId);
+        return 0;
+    }
+
+    GivePlayerMoney(playerId, -amount);
     gBids[containerId][playerId] += amount;
     gTotalBids[containerId] += amount;
     OnBidUpdated(containerId);
+    OnPlayerBidSuccess(playerId);
     return 1;
 }
 

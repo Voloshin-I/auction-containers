@@ -33,7 +33,9 @@ enum E_LOOT
 new containers[MAX_CONTAINERS][E_CONTAINER];
 new loots[MAX_LOOTS][E_LOOT];
 new containerTypes[MAX_CONTAINER_TYPES];
-new ChancesForContainerTypes[MAX_CONTAINER_TYPES];
+// Sum of loot.chance per spawn `type` id (DB), not per slot j in containerTypes[]
+new LootChanceTotalByType[MAX_CONTAINER_TYPE_ID];
+new gLootRowCount;
 
 // Not the best hierarchy. ConnectToDatabase calls LoadDataFromDatabase.
 forward ConnectToDatabase();
@@ -117,10 +119,10 @@ LoadContainersFromDatabase()
 forward LoadLootsFromDatabase();
 LoadLootsFromDatabase()
 {
-    // Invalidate all loot chances
-    for (new i = 0; i < MAX_CONTAINER_TYPES; i++)
+    new i;
+    for (i = 0; i < MAX_CONTAINER_TYPE_ID; i++)
     {
-        ChancesForContainerTypes[i] = 0;
+        LootChanceTotalByType[i] = 0;
     }
 
     new Cache:result = mysql_query(connId, "SELECT * FROM `loot`");
@@ -129,10 +131,18 @@ LoadLootsFromDatabase()
     if (rows == 0)
     {
         print("No loot found in database");
+        gLootRowCount = 0;
+        cache_delete(result);
         return 1;
     }
+    if (rows > MAX_LOOTS)
+    {
+        printf("WARNING: loot rows %d exceed MAX_LOOTS %d, truncating", rows, MAX_LOOTS);
+        rows = MAX_LOOTS;
+    }
+    gLootRowCount = rows;
     printf("%d loots loaded", rows);
-    for(new i = 0; i < rows; i++)
+    for (i = 0; i < rows; i++)
     {
         printf("Loot %d: %s", i, loots[i][name]);
         cache_get_value_name_int(i, "id", loots[i][loot_id]);
@@ -148,13 +158,15 @@ LoadLootsFromDatabase()
         cache_get_value_name_int(i, "value", loots[i][value]);
         printf("Loot value: %d", loots[i][value]);
 
-        for (new j = 0; j < MAX_CONTAINER_TYPES; j++)
+        new ct = loots[i][container_type];
+        if (ct >= 0 && ct < MAX_CONTAINER_TYPE_ID)
         {
-            if (containerTypes[j] == loots[i][container_type])
-            {
-                ChancesForContainerTypes[j] += loots[i][chance];
-                printf("Chances for container type %d: %d", j, ChancesForContainerTypes[j]);
-            }
+            LootChanceTotalByType[ct] += loots[i][chance];
+            printf("Loot chance total for type %d: %d", ct, LootChanceTotalByType[ct]);
+        }
+        else
+        {
+            printf("WARNING: loot row %d has type %d out of range [0, %d)", i, ct, MAX_CONTAINER_TYPE_ID);
         }
     }
 
@@ -227,8 +239,17 @@ GetContainerIdByAreaId(playerId, areaId)
 
 GetRandomLootIdForContainerType(containerType)
 {
-    new randomChance = random(ChancesForContainerTypes[containerType]);
-    for(new i = 0; i < MAX_LOOTS; i++)
+    if (containerType < 0 || containerType >= MAX_CONTAINER_TYPE_ID)
+    {
+        return -1;
+    }
+    new total = LootChanceTotalByType[containerType];
+    if (total <= 0)
+    {
+        return -1;
+    }
+    new randomChance = random(total);
+    for (new i = 0; i < gLootRowCount; i++)
     {
         if (loots[i][container_type] == containerType)
         {

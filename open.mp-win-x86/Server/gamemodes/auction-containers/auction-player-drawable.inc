@@ -14,18 +14,6 @@ CreateContainerDrawableForPlayer(playerid, containerid)
 forward CreateContainerDrawableInfoForPlayer(playerid, containerid);
 CreateContainerDrawableInfoForPlayer(playerid, containerid)
 {
-    /*
-    new PlayerText:playerTextDrawID = CreatePlayerTextDraw(playerid, 320.0, 200.0, "Auction");
-    drawables[playerid][containerid] = playerTextDrawID;
-    PlayerTextDrawAlignment(playerid, playerTextDrawID, TEXT_DRAW_ALIGN_CENTER);
-    PlayerTextDrawColour(playerid, playerTextDrawID, 0xFFFFFFFF);
-    PlayerTextDrawBackgroundColour(playerid, playerTextDrawID, 0x000000FF);
-    PlayerTextDrawUseBox(playerid, playerTextDrawID, true);
-    PlayerTextDrawBoxColour(playerid, playerTextDrawID, 0x00000088);
-    PlayerTextDrawTextSize(playerid,playerTextDrawID, 200.0, 20.0);
-*/
-    //new PlayerText:td = CreatePlayerTextDraw(playerid, 500.0, 300.0, "Auction");
-    //new PlayerText:timerText = CreatePlayerTextDraw(playerid, 263.0, 150.0, "00:00:00");
     new PlayerText:td = CreatePlayerTextDraw(playerid, 263.0, 150.0, "00:00:00");
     PlayerTextDrawUseBox(playerid, td, true);
     PlayerTextDrawBoxColour(playerid, td, 0x000000AA);
@@ -86,7 +74,7 @@ ShowContainerDrawableForPlayer(playerid, containerid)
         playerCurrentContainer[playerid] = containerid;
     }
     playerCurrentContainer[playerid] = containerid;
-    UpdateContainerDrawableForPlayer(playerid)
+    UpdateContainerDrawableForPlayer(playerid);
 
     PlayerTextDrawShow(playerid, drawables[playerid][containerid]);
     PlayerTextDrawShow(playerid, bidButtons[playerid][containerid]);
@@ -101,7 +89,7 @@ UpdateContainerDrawableForAllPlayers(containerid)
     {
         if (playerCurrentContainer[i] == containerid)
         {
-            PlayerTextDrawShow(i, bidButtons[i][containerid]);
+            UpdateContainerDrawableForPlayer(i);
         }
     }
     return 1;
@@ -118,6 +106,7 @@ UpdateContainerDrawableForPlayer(playerid)
 
     gDrawableStr[0] = EOS;
     FormatTimer();
+    FormatStartingPriceLine(containerid);
     FormatBids(containerid);
     PlayerTextDrawSetString(playerid, drawables[playerid][containerid], gDrawableStr);
     return 1;
@@ -150,9 +139,20 @@ FormatTimer()
     strcat(gDrawableStr, tmp, BID_DRAWABLE_STRING_LENGTH);
 }
 
+FormatStartingPriceLine(containerid)
+{
+    new line[96];
+    format(line, sizeof(line), "Starting price: $%d~n~", containers[containerid][initial_price]);
+    strcat(gDrawableStr, line, BID_DRAWABLE_STRING_LENGTH);
+}
+
 FormatBids(containerid)
 {
-    if (gTotalBids[containerid] == 0) return;
+    if (gTotalBids[containerid] == 0)
+    {
+        strcat(gDrawableStr, "No bids yet.~n~", BID_DRAWABLE_STRING_LENGTH);
+        return 1;
+    }
 
     new line[128];
     for(new i = 0; i < MAX_PLAYERS; i++)
@@ -165,4 +165,5 @@ FormatBids(containerid)
         format(line, sizeof(line), "%s: %d$ (%d%%)~n~", gPlayerNames[i], playerBid, playerChance);
         strcat(gDrawableStr, line, BID_DRAWABLE_STRING_LENGTH);
     }
+    return 1;
 }

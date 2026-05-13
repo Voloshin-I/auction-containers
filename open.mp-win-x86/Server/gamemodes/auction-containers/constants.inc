@@ -1,9 +1,13 @@
 #define MAX_CONTAINERS 5
 #define MAX_LOOTS 10
 #define MAX_CONTAINER_TYPES 5
+// Exclusive upper bound for container `type` from DB when indexing loot chance totals
+#define MAX_CONTAINER_TYPE_ID 256
 #define AUCTION_COOLDOWN_SECONDS 20
 #define AUCTION_START_DELAY_SECONDS 3
 #define TIMER_STRING_LENGTH 12
 #define BID_DRAWABLE_STRING_LENGTH (64 * MAX_PLAYERS + TIMER_STRING_LENGTH)
 #define DIALOG_BID 1
+#define DIALOG_BID_ACCEPTED 2
+#define DIALOG_BID_REJECTED 3
 #define MAX_LOOT_NAME_LENGTH 132

@@ -2,6 +2,8 @@
 forward OnAuctionTimerTick();
 forward OnBidUpdated(containerId);
 forward MakeBid(playerId, containerId, amount);
+forward OnPlayerBidSuccess(playerid);
+forward OnPlayerBidFail(playerid);
 forward CreateContainerObject(containerId);
 forward DestroyContainerObject(containerId);
 forward GetRandomLootIdForContainerType(containerType);

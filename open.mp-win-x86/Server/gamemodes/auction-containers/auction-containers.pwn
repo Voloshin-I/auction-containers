@@ -33,7 +33,7 @@ public OnPlayerConnect(playerid)
     }
 
     GetPlayerName(playerid, gPlayerNames[playerid], MAX_PLAYER_NAME);
-    GivePlayerMoney(playerid, 9999)
+    GivePlayerMoney(playerid, 9999);
     return 1;
 }
 
@@ -75,20 +75,51 @@ public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
     return 1;
 }
 
+RestoreAuctionTextDrawAfterBidDialog(playerid)
+{
+    new containerid = playerCurrentContainer[playerid];
+    if (containerid >= 0 && containerid < MAX_CONTAINERS && containers[containerid][container_id] != -1)
+    {
+        ShowContainerDrawableForPlayer(playerid, containerid);
+    }
+    return 1;
+}
+
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 {
+    if (dialogid == DIALOG_BID_ACCEPTED || dialogid == DIALOG_BID_REJECTED)
+    {
+        RestoreAuctionTextDrawAfterBidDialog(playerid);
+        return 1;
+    }
+
     if (dialogid == DIALOG_BID)
     {
-        if (response) // нажал "Bid"
+        if (!response)
         {
-            new amount = strval(inputtext);
-            if (amount > 0)
-            {
-                new containerid = playerCurrentContainer[playerid];
-                MakeBid(playerid, containerid, amount);
-            }
+            RestoreAuctionTextDrawAfterBidDialog(playerid);
+            return 1;
         }
+
+        new amount = strval(inputtext);
+        new containerid = playerCurrentContainer[playerid];
+        MakeBid(playerid, containerid, amount);
+        return 1;
     }
+    return 1;
+}
+
+public OnPlayerBidSuccess(playerid)
+{
+    ShowPlayerDialog(playerid, DIALOG_BID_ACCEPTED, DIALOG_STYLE_MSGBOX, "Bid",
+        "Your bid was successfully accepted.", "OK", "");
+    return 1;
+}
+
+public OnPlayerBidFail(playerid)
+{
+    ShowPlayerDialog(playerid, DIALOG_BID_REJECTED, DIALOG_STYLE_MSGBOX, "Bid",
+        "Your bid was not accepted because it is invalid. See the chat for details.", "OK", "");
     return 1;
 }
 // ================================END Dialogs===============================
