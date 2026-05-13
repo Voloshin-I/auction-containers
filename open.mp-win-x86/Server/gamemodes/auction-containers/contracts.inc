@@ -1,8 +1,11 @@
 // Global cross-module methods (callbacks)
 forward OnAuctionTimerTick();
 forward OnBidUpdated(containerId);
-forward MakeBid(playerid, containerid, amount);
-//forward GetStake(containerId, stake[E_STAKE]);
+forward MakeBid(playerId, containerId, amount);
+forward CreateContainerObject(containerId);
+forward DestroyContainerObject(containerId);
+forward GetRandomLootIdForContainerType(containerType);
+forward OnPlayerWon(containerId, playerId, lootId)
 
 // Global data
 new gAuctionTimeLeft = AUCTION_COOLDOWN_SECONDS;

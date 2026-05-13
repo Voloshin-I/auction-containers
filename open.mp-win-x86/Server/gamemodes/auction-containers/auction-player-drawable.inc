@@ -160,9 +160,9 @@ FormatBids(containerid)
         new playerBid = gBids[containerid][i];
         if (playerBid == 0) continue;
 
-        new chance = playerBid * 100 / gTotalBids[containerid];
+        new playerChance = playerBid * 100 / gTotalBids[containerid];
 
-        format(line, sizeof(line), "%s: %d$ (%d%%)~n~", gPlayerNames[i], playerBid, chance);
+        format(line, sizeof(line), "%s: %d$ (%d%%)~n~", gPlayerNames[i], playerBid, playerChance);
         strcat(gDrawableStr, line, BID_DRAWABLE_STRING_LENGTH);
     }
 }
