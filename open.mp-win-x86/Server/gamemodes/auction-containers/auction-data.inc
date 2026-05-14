@@ -49,12 +49,21 @@ forward ProduceAuctionResult(containerId);
 ProduceAuctionResult(containerId)
 {
     new winnerId = GetWinner(containerId);
-    new lootId = -1;
-    if (winnerId != -1)
+    if (winnerId == -1)
+        return 1;
+
+    new lootId = GetRandomLootIdForContainerType(containers[containerId][type]);
+    if (lootId == -1)
     {
-        lootId = GetRandomLootIdForContainerType(containers[containerId][type]);
+
+        printf("Invalid loot generated. Data problems,
+            containerId, t, gLootRowCount, total, MAX_CONTAINER_TYPE_ID);
+        return 1;
     }
-    OnPlayerWon(containerId,winnerId, lootId);
+    new winnerNick[MAX_PLAYER_NAME];
+    winnerNick[0] = '\0';
+    strmid(winnerNick, gPlayerNames[winnerId], 0, MAX_PLAYER_NAME, MAX_PLAYER_NAME);
+    OnPlayerWon(containerId, winnerId, lootId, winnerNick);
     return 1;
 }
 

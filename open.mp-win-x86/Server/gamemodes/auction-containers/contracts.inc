@@ -7,7 +7,10 @@ forward OnPlayerBidFail(playerid);
 forward CreateContainerObject(containerId);
 forward DestroyContainerObject(containerId);
 forward GetRandomLootIdForContainerType(containerType);
-forward OnPlayerWon(containerId, playerId, lootId)
+forward OnPlayerWon(containerId, playerId, lootId, const winnerNick[]);
+forward DeliverAuctionPrizeToPlayer(playerid, bool:lootIsModel, lootValue);
+forward EnqueuePendingLoot(const nick[], bool:lootIsModel, lootValue);
+forward LoadAndApplyPendingLootsForPlayer(playerid);
 
 // Global data
 new gAuctionTimeLeft = AUCTION_COOLDOWN_SECONDS;

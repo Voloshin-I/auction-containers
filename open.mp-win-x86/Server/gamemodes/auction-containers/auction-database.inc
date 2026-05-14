@@ -183,6 +183,67 @@ LoadLootsFromDatabase()
     return 1;
 }
 
+forward EnqueuePendingLoot(const nick[], bool:lootIsModel, lootValue);
+EnqueuePendingLoot(const nick[], bool:lootIsModel, lootValue)
+{
+    if (nick[0] == '\0')
+    {
+        printf("[EnqueuePendingLoot] empty nick, is_model=%d value=%d", _:lootIsModel, lootValue);
+        return 0;
+    }
+    new q[192];
+    mysql_format(connId, q, sizeof(q),
+        "INSERT INTO `pending_loots` (`player_nick`,`is_model`,`value`) VALUES ('%e', %d, %d)",
+        nick, _:lootIsModel, lootValue);
+    mysql_query(connId, q);
+    return 1;
+}
+
+forward LoadAndApplyPendingLootsForPlayer(playerid);
+LoadAndApplyPendingLootsForPlayer(playerid)
+{
+    if (!IsPlayerConnected(playerid))
+    {
+        return 0;
+    }
+    new nick[MAX_PLAYER_NAME];
+    GetPlayerName(playerid, nick, MAX_PLAYER_NAME);
+    if (nick[0] == '\0')
+    {
+        return 0;
+    }
+
+    new q[160];
+    mysql_format(connId, q, sizeof(q),
+        "SELECT `is_model`, `value` FROM `pending_loots` WHERE `player_nick` = '%e'",
+        nick);
+
+    new Cache:result = mysql_query(connId, q);
+    new rows;
+    cache_get_row_count(rows);
+    if (rows == 0)
+    {
+        cache_delete(result);
+        return 1;
+    }
+
+    new bool:isModel;
+    new prizeValue;
+    for (new i = 0; i < rows; i++)
+    {
+        cache_get_value_name_bool(i, "is_model", isModel);
+        cache_get_value_name_int(i, "value", prizeValue);
+        DeliverAuctionPrizeToPlayer(playerid, isModel, prizeValue);
+    }
+    cache_delete(result);
+
+    mysql_format(connId, q, sizeof(q),
+        "DELETE FROM `pending_loots` WHERE `player_nick` = '%e'",
+        nick);
+    mysql_query(connId, q);
+    return 1;
+}
+
 forward SpawnContainer(containerId);
 SpawnContainer(containerId)
 {

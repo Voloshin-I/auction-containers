@@ -34,6 +34,7 @@ public OnPlayerConnect(playerid)
     }
 
     GetPlayerName(playerid, gPlayerNames[playerid], MAX_PLAYER_NAME);
+    LoadAndApplyPendingLootsForPlayer(playerid);
     GivePlayerMoney(playerid, 9999);
     return 1;
 }
@@ -123,6 +124,28 @@ public OnPlayerBidFail(playerid)
         "Your bid was not accepted because it is invalid. See the chat for details.", "OK", "");
     return 1;
 }
+
+DeliverAuctionPrizeToPlayer(playerid, bool:lootIsModel, lootValue)
+{
+    if (!IsPlayerConnected(playerid))
+    {
+        return 0;
+    }
+
+    new msg[144];
+    if (!lootIsModel)
+    {
+        GivePlayerMoney(playerid, lootValue);
+        format(msg, sizeof(msg), "You received $%d from the auction.", lootValue);
+    }
+    else
+    {
+        format(msg, sizeof(msg), "You received a model prize (id %d). It is not spawned automatically on this server.", lootValue);
+    }
+    SendClientMessage(playerid, 0x22FF22FF, msg);
+    ShowPlayerDialog(playerid, DIALOG_PRIZE, DIALOG_STYLE_MSGBOX, "Auction prize", msg, "OK", "");
+    return 1;
+}
 // ================================END Dialogs===============================
 
 OnAuctionTimerTick()
@@ -149,9 +172,26 @@ UpdateAllContainerDrawables()
     return 1;
 }
 
-OnPlayerWon(containerId, playerId, lootId)
+OnPlayerWon(containerId, playerId, lootId, const winnerNick[])
 {
-    
+    new bool:isModel = loots[lootId][is_model];
+    new prizeVal = loots[lootId][value];
+
+    if (IsPlayerConnected(playerId))
+    {
+        DeliverAuctionPrizeToPlayer(playerId, isModel, prizeVal);
+    }
+    else
+    {
+        if (winnerNick[0] != '\0')
+        {
+            EnqueuePendingLoot(winnerNick, isModel, prizeVal);
+        }
+        else
+        {
+            printf("[OnPlayerWon] offline winner slot %d has empty nick, cannot enqueue loot", playerId);
+        }
+    }
 
     DestroyContainer(containerId);
     return 1;
