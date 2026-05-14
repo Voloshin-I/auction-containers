@@ -12,41 +12,68 @@
 
 main()
 {
+    printf("[GM] main()");
     print("My gamemode loaded");
 }
 
 public OnGameModeInit()
 {
+    printf("[GM] OnGameModeInit enter");
     print("Gamemode initialized");
 	ConnectToDatabase();
     StartAuction();
-	
+    printf("[GM] OnGameModeInit exit (StartAuction scheduled)");
     return 1;
 }
 
 public OnPlayerConnect(playerid)
 {
+    printf("[PendingRewards] OnPlayerConnect start playerid=%d", playerid);
     playerCurrentContainer[playerid] = -1;
     SendClientMessage(playerid, -1, "Hello from PAWN!");
     for(new i = 0; i < gSpawnContainerCount; i++)
     {
         CreateContainerDrawableForPlayer(playerid, i);
     }
+    printf("[PendingRewards] OnPlayerConnect drawables created count=%d playerid=%d", gSpawnContainerCount, playerid);
 
     GetPlayerName(playerid, gPlayerNames[playerid], MAX_PLAYER_NAME);
-    LoadAndApplyPendingLootsForPlayer(playerid);
+    printf("[PendingRewards] OnPlayerConnect gPlayerNames cached='%s' playerid=%d (pending rewards load on spawn + short delay)", gPlayerNames[playerid], playerid);
+
     GivePlayerMoney(playerid, 9999);
+    printf("[PendingRewards] OnPlayerConnect exit playerid=%d", playerid);
+    return 1;
+}
+
+forward ApplyPendingRewardsTimer(playerid);
+public ApplyPendingRewardsTimer(playerid)
+{
+    printf("[PendingRewards] ApplyPendingRewardsTimer fired playerid=%d connected=%d", playerid, IsPlayerConnected(playerid));
+    if (!IsPlayerConnected(playerid))
+    {
+        return 0;
+    }
+    LoadAndApplyPendingRewardsForPlayer(playerid);
+    return 0;
+}
+
+public OnPlayerSpawn(playerid)
+{
+    printf("[PendingRewards] OnPlayerSpawn playerid=%d -> schedule pending rewards apply in 750ms", playerid);
+    SetTimerEx("ApplyPendingRewardsTimer", 750, false, "i", playerid);
     return 1;
 }
 
 public OnPlayerDisconnect(playerid)
 {
+    printf("[GM] OnPlayerDisconnect playerid=%d", playerid);
     OnPlayerDisconnectForDrawables(playerid);
     return 1;
 }
 
 forward OnPlayerEnterDynamicArea(playerid, areaid);
 public OnPlayerEnterDynamicArea(playerid, areaid){
+    printf("[PendingRewards] OnPlayerEnterDynamicArea playerid=%d areaid=%d (may overlap with connect / reward dialog)", playerid, areaid);
     SendClientMessage(playerid, -1, "OnPlayerEnterDynamicArea");
     new containerid = GetContainerIdByAreaId(playerid, areaid);
     if (containerid == -1)
@@ -54,6 +81,7 @@ public OnPlayerEnterDynamicArea(playerid, areaid){
         return 1;
     }
 
+    printf("[PendingRewards] OnPlayerEnterDynamicArea -> ShowContainerDrawableForPlayer playerid=%d containerid=%d", playerid, containerid);
     ShowContainerDrawableForPlayer(playerid, containerid);
     return 1;
 }
@@ -61,6 +89,7 @@ public OnPlayerEnterDynamicArea(playerid, areaid){
 forward OnPlayerLeaveDynamicArea(playerid, areaid);
 public OnPlayerLeaveDynamicArea(playerid, areaid)
 {
+    printf("[PendingRewards] OnPlayerLeaveDynamicArea playerid=%d areaid=%d", playerid, areaid);
     HideContainerDrawableForPlayer(playerid);
     return 1;
 }
@@ -69,6 +98,7 @@ public OnPlayerLeaveDynamicArea(playerid, areaid)
 // ================================Dialogs===============================
 public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
 {
+    printf("[GM] OnPlayerClickPlayerTextDraw playerid=%d", playerid);
     if (IsPlayerBidButton(playerid, playertextid))
     {
         ShowPlayerDialog(playerid, DIALOG_BID, DIALOG_STYLE_INPUT,
@@ -80,23 +110,33 @@ public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
 RestoreAuctionTextDrawAfterBidDialog(playerid)
 {
     new containerid = playerCurrentContainer[playerid];
+    printf("[GM] RestoreAuctionTextDrawAfterBidDialog playerid=%d containerid=%d", playerid, containerid);
     if (containerid >= 0 && containerid < gSpawnContainerCount && containers[containerid][container_id] != -1)
     {
         ShowContainerDrawableForPlayer(playerid, containerid);
+        printf("[GM] RestoreAuctionTextDrawAfterBidDialog restored drawable playerid=%d", playerid);
     }
     return 1;
 }
 
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 {
+    if (dialogid == DIALOG_REWARD)
+    {
+        printf("[PendingRewards] OnDialogResponse DIALOG_REWARD playerid=%d response=%d", playerid, response);
+        return 1;
+    }
+
     if (dialogid == DIALOG_BID_ACCEPTED || dialogid == DIALOG_BID_REJECTED)
     {
+        printf("[GM] OnDialogResponse bid ack/reject playerid=%d dialogid=%d", playerid, dialogid);
         RestoreAuctionTextDrawAfterBidDialog(playerid);
         return 1;
     }
 
     if (dialogid == DIALOG_BID)
     {
+        printf("[GM] OnDialogResponse DIALOG_BID playerid=%d response=%d", playerid, response);
         if (!response)
         {
             RestoreAuctionTextDrawAfterBidDialog(playerid);
@@ -108,11 +148,13 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         MakeBid(playerid, containerid, amount);
         return 1;
     }
+    printf("[GM] OnDialogResponse unhandled dialogid=%d playerid=%d", dialogid, playerid);
     return 1;
 }
 
 public OnPlayerBidSuccess(playerid)
 {
+    printf("[GM] OnPlayerBidSuccess playerid=%d", playerid);
     ShowPlayerDialog(playerid, DIALOG_BID_ACCEPTED, DIALOG_STYLE_MSGBOX, "Bid",
         "Your bid was successfully accepted.", "OK", "");
     return 1;
@@ -120,30 +162,37 @@ public OnPlayerBidSuccess(playerid)
 
 public OnPlayerBidFail(playerid)
 {
+    printf("[GM] OnPlayerBidFail playerid=%d", playerid);
     ShowPlayerDialog(playerid, DIALOG_BID_REJECTED, DIALOG_STYLE_MSGBOX, "Bid",
         "Your bid was not accepted because it is invalid. See the chat for details.", "OK", "");
     return 1;
 }
 
-DeliverAuctionPrizeToPlayer(playerid, bool:lootIsModel, lootValue)
+DeliverAuctionRewardToPlayer(playerid, bool:rewardIsModel, rewardValue)
 {
+    printf("[Reward] DeliverAuctionRewardToPlayer enter playerid=%d rewardIsModel=%d rewardValue=%d connected=%d currentContainer=%d",
+        playerid, _:rewardIsModel, rewardValue, IsPlayerConnected(playerid), playerCurrentContainer[playerid]);
     if (!IsPlayerConnected(playerid))
     {
+        printf("[Reward] DeliverAuctionRewardToPlayer abort: not connected playerid=%d", playerid);
         return 0;
     }
 
     new msg[144];
-    if (!lootIsModel)
+    if (!rewardIsModel)
     {
-        GivePlayerMoney(playerid, lootValue);
-        format(msg, sizeof(msg), "You received $%d from the auction.", lootValue);
+        GivePlayerMoney(playerid, rewardValue);
+        format(msg, sizeof(msg), "You received $%d from the auction.", rewardValue);
     }
     else
     {
-        format(msg, sizeof(msg), "You received a model prize (id %d). It is not spawned automatically on this server.", lootValue);
+        format(msg, sizeof(msg), "You received a model reward (id %d). It is not spawned automatically on this server.", rewardValue);
     }
+    printf("[Reward] DeliverAuctionRewardToPlayer SendClientMessage playerid=%d msg='%s'", playerid, msg);
     SendClientMessage(playerid, 0x22FF22FF, msg);
-    ShowPlayerDialog(playerid, DIALOG_PRIZE, DIALOG_STYLE_MSGBOX, "Auction prize", msg, "OK", "");
+    printf("[Reward] DeliverAuctionRewardToPlayer ShowPlayerDialog DIALOG_REWARD=%d playerid=%d", DIALOG_REWARD, playerid);
+    ShowPlayerDialog(playerid, DIALOG_REWARD, DIALOG_STYLE_MSGBOX, "Auction reward", msg, "OK", "");
+    printf("[Reward] DeliverAuctionRewardToPlayer done playerid=%d", playerid);
     return 1;
 }
 // ================================END Dialogs===============================
@@ -156,6 +205,7 @@ OnAuctionTimerTick()
 
 OnBidUpdated(containerId)
 {
+    printf("[GM] OnBidUpdated containerId=%d", containerId);
     UpdateContainerDrawableForAllPlayers(containerId);
     return 1;
 }
@@ -182,19 +232,20 @@ OnPlayerWon(containerId, playerId, lootId, const winnerNick[])
 
     if (IsPlayerConnected(playerId))
     {
-        printf("[OnPlayerWon] player online -> deliver");
-        DeliverAuctionPrizeToPlayer(playerId, isModel, prizeVal);
+        printf("[OnPlayerWon] player online -> DeliverAuctionRewardToPlayer");
+        DeliverAuctionRewardToPlayer(playerId, isModel, prizeVal);
     }
     else
     {
         printf("[OnPlayerWon] player offline");
         if (winnerNick[0] != '\0')
         {
-            EnqueuePendingLoot(winnerNick, isModel, prizeVal);
+            printf("[OnPlayerWon] EnqueuePendingReward nick='%s'", winnerNick);
+            EnqueuePendingReward(winnerNick, isModel, prizeVal);
         }
         else
         {
-            printf("[OnPlayerWon] offline winner slot %d has empty nick, cannot enqueue loot", playerId);
+            printf("[OnPlayerWon] offline winner slot %d has empty nick, cannot enqueue pending reward", playerId);
         }
     }
 

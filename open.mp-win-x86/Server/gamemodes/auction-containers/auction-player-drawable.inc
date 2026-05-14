@@ -6,14 +6,17 @@ new playerCurrentContainer[MAX_PLAYERS];
 forward CreateContainerDrawableForPlayer(playerid, containerid);
 CreateContainerDrawableForPlayer(playerid, containerid)
 {
+    printf("[Draw] CreateContainerDrawableForPlayer playerid=%d containerid=%d", playerid, containerid);
     CreateContainerDrawableInfoForPlayer(playerid, containerid);
     CreateContainerBidButtonForPlayer(playerid, containerid);
+    printf("[Draw] CreateContainerDrawableForPlayer done playerid=%d containerid=%d", playerid, containerid);
     return 1;
 }
 
 forward CreateContainerDrawableInfoForPlayer(playerid, containerid);
 CreateContainerDrawableInfoForPlayer(playerid, containerid)
 {
+    printf("[Draw] CreateContainerDrawableInfoForPlayer playerid=%d containerid=%d", playerid, containerid);
     new PlayerText:td = CreatePlayerTextDraw(playerid, 263.0, 150.0, "00:00:00");
     PlayerTextDrawUseBox(playerid, td, true);
     PlayerTextDrawBoxColour(playerid, td, 0x000000AA);
@@ -23,12 +26,14 @@ CreateContainerDrawableInfoForPlayer(playerid, containerid)
 
     drawables[playerid][containerid] = td;
 
+    printf("[Draw] CreateContainerDrawableInfoForPlayer done PlayerText=%d", _:td);
     return 1;
 }
 
 forward CreateContainerBidButtonForPlayer(playerid, containerid);
 CreateContainerBidButtonForPlayer(playerid, containerid)
 {
+    printf("[Draw] CreateContainerBidButtonForPlayer playerid=%d containerid=%d", playerid, containerid);
     new PlayerText:btn = CreatePlayerTextDraw(playerid, 290.0, 200.0, "[ Make a bid ]");
     PlayerTextDrawUseBox(playerid, btn, true);
     PlayerTextDrawBoxColour(playerid, btn, 0xFF6600FF);
@@ -39,6 +44,7 @@ CreateContainerBidButtonForPlayer(playerid, containerid)
 
     bidButtons[playerid][containerid] = btn;
 
+    printf("[Draw] CreateContainerBidButtonForPlayer done PlayerText=%d", _:btn);
     return 1;
 }
 
@@ -47,24 +53,32 @@ IsPlayerBidButton(playerid, PlayerText:playertextid)
 {
     new containerid = playerCurrentContainer[playerid];
     if (containerid == -1) return 0;
-    return playertextid == bidButtons[playerid][containerid];
+    if (playertextid == bidButtons[playerid][containerid])
+    {
+        printf("[Draw] IsPlayerBidButton match playerid=%d containerid=%d", playerid, containerid);
+        return 1;
+    }
+    return 0;
 }
 
 forward OnPlayerDisconnectForDrawables(playerid);
 OnPlayerDisconnectForDrawables(playerid)
 {
+    printf("[Draw] OnPlayerDisconnectForDrawables enter playerid=%d", playerid);
     playerCurrentContainer[playerid] = -1;
     for (new i = 0; i < gSpawnContainerCount; i++)
     {
         PlayerTextDrawDestroy(playerid, drawables[playerid][i]);
         PlayerTextDrawDestroy(playerid, bidButtons[playerid][i]);
     }
+    printf("[Draw] OnPlayerDisconnectForDrawables exit playerid=%d destroyed=%d pairs", playerid, gSpawnContainerCount);
     return 1;
 }
 
 forward ShowContainerDrawableForPlayer(playerid, containerid);
 ShowContainerDrawableForPlayer(playerid, containerid)
 {
+    printf("[Draw] ShowContainerDrawableForPlayer playerid=%d containerid=%d (SelectTextDraw + show auction UI)", playerid, containerid);
     if (playerCurrentContainer[playerid] != containerid)
     {
         HideContainerDrawableForPlayer(playerid);
@@ -76,17 +90,20 @@ ShowContainerDrawableForPlayer(playerid, containerid)
     PlayerTextDrawShow(playerid, drawables[playerid][containerid]);
     PlayerTextDrawShow(playerid, bidButtons[playerid][containerid]);
     SelectTextDraw(playerid, 0xFFFFFFAA);
+    printf("[Draw] ShowContainerDrawableForPlayer done playerid=%d SelectTextDraw active", playerid);
     return 1;
 }
 
 forward UpdateContainerDrawableForAllPlayers(containerid);
 UpdateContainerDrawableForAllPlayers(containerid)
 {
+    new updated = 0;
     for(new i = 0; i < MAX_PLAYERS; i++)
     {
         if (playerCurrentContainer[i] == containerid)
         {
             UpdateContainerDrawableForPlayer(i);
+            updated++;
         }
     }
     return 1;
@@ -113,6 +130,7 @@ forward HideContainerDrawableForPlayer(playerid);
 HideContainerDrawableForPlayer(playerid)
 {
     new containerid = playerCurrentContainer[playerid];
+    printf("[Draw] HideContainerDrawableForPlayer playerid=%d hadContainer=%d", playerid, containerid);
     if (containerid == -1)
     {
         return 1;
@@ -121,6 +139,7 @@ HideContainerDrawableForPlayer(playerid)
     PlayerTextDrawHide(playerid, drawables[playerid][containerid]);
     PlayerTextDrawHide(playerid, bidButtons[playerid][containerid]);
     CancelSelectTextDraw(playerid);
+    printf("[Draw] HideContainerDrawableForPlayer done playerid=%d CancelSelectTextDraw", playerid);
     return 1;
 }
 

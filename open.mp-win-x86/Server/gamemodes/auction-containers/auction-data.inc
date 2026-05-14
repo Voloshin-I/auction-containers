@@ -1,15 +1,10 @@
 new auctionTimerFunction;
 new auctionStartDelayTimerFunction;
-//new bool:timerStarted = false;
 
 forward StartAuction();
 public StartAuction()
 {
-    //if (!timerStarted)
-    //{
-    //    timerStarted = true;
-    //    auctionTimerFunction = SetTimer("AuctionTimerTick", 1000, true);
-    //}
+    printf("[Auction] StartAuction enter");
     printf("Starting auction");
     KillTimer(auctionStartDelayTimerFunction);
     SpawnAllContainers();
@@ -24,6 +19,7 @@ public StartAuction()
         }
         OnBidUpdated(i);
     }
+    printf("[Auction] StartAuction exit containers=%d timer=%d timeLeft=%d", gSpawnContainerCount, auctionTimerFunction, gAuctionTimeLeft);
     return 1;
 }
 
@@ -41,6 +37,7 @@ public AuctionTimerTick()
         }
         KillTimer(auctionTimerFunction);
         auctionStartDelayTimerFunction = SetTimer("StartAuction", 1000 * AUCTION_START_DELAY_SECONDS, false);
+        printf("[Auction] AuctionTimerTick scheduled StartAuction delayMs=%d", 1000 * AUCTION_START_DELAY_SECONDS);
     }
     return 1;
 }
@@ -110,11 +107,13 @@ CanMakeBid(playerid, containerid, amount)
         SendClientMessage(playerid, 0xFF6666FF, msg);
         return 0;
     }
+    printf("[Auction] CanMakeBid ok playerid=%d containerid=%d amount=%d", playerid, containerid, amount);
     return 1;
 }
 
 MakeBid(playerId, containerId, amount)
 {
+    printf("[Auction] MakeBid enter playerId=%d containerId=%d amount=%d", playerId, containerId, amount);
     if (!CanMakeBid(playerId, containerId, amount))
     {
         OnPlayerBidFail(playerId);
@@ -126,12 +125,14 @@ MakeBid(playerId, containerId, amount)
     gTotalBids[containerId] += amount;
     OnBidUpdated(containerId);
     OnPlayerBidSuccess(playerId);
+    printf("[Auction] MakeBid success playerId=%d totalBids[%d]=%d", playerId, containerId, gTotalBids[containerId]);
     return 1;
 }
 
 
 GetWinner(containerId)
 {
+    printf("[Auction] GetWinner enter containerId=%d totalBids=%d", containerId, gTotalBids[containerId]);
     if (gTotalBids[containerId] == 0) return -1;
 
     new randomBid = random(gTotalBids[containerId]);
@@ -140,19 +141,10 @@ GetWinner(containerId)
         randomBid -= gBids[containerId][i];
         if (randomBid <= 0)
         {
+            printf("[Auction] GetWinner winnerId=%d", i);
             return i;
         }
     }
+    printf("[Auction] GetWinner fallback -1 (unexpected)");
     return -1;
-}
-
-forward AuctionStartDelayTimerTick();
-AuctionStartDelayTimerTick()
-{
-    gAuctionStartDelayTimeLeft--;
-    if (gAuctionStartDelayTimeLeft <= 0)
-    {
-        StartAuction();
-    }
-    return 1;
 }

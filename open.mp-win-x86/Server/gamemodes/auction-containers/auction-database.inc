@@ -42,34 +42,41 @@ new gSpawnContainerCount;
 forward ConnectToDatabase();
 ConnectToDatabase()
 {
+    printf("[DB] ConnectToDatabase enter db=%s host=%s", DataBase, Host);
     new MySQLOpt:opt = mysql_init_options();
 	mysql_set_option(opt, POOL_SIZE, 2);
 	connId = mysql_connect(Host,User, Password, DataBase);
 	
 	if(mysql_errno())
     {
+        printf("[DB] ConnectToDatabase FAIL errno=%d", mysql_errno());
         printf("FAIL connect to db %s", DataBase);
     }
     else
     {
+        printf("[DB] ConnectToDatabase SUCCESS");
         printf("SUCCESS connect to db %s", DataBase);
         LoadDataFromDatabase();
     }
 	
+    printf("[DB] ConnectToDatabase exit");
     return 1;
 }
 
 forward LoadDataFromDatabase();
 LoadDataFromDatabase()
 {
+    printf("[DB] LoadDataFromDatabase enter");
     LoadContainersFromDatabase();
     LoadLootsFromDatabase();
+    printf("[DB] LoadDataFromDatabase exit");
     return 1;
 }
 
 forward LoadContainersFromDatabase();
 LoadContainersFromDatabase()
 {
+    printf("[DB] LoadContainersFromDatabase enter");
     // Invalidate all container types
     for (new i = 0; i < MAX_CONTAINER_TYPES; i++)
     {
@@ -84,6 +91,7 @@ LoadContainersFromDatabase()
         print("No containers found in database");
         gSpawnContainerCount = 0;
         cache_delete(result);
+        printf("[DB] LoadContainersFromDatabase exit early: zero rows");
         return 1;
     }
     if (rows > MAX_CONTAINERS)
@@ -122,12 +130,12 @@ LoadContainersFromDatabase()
         containers[i][container_id] = -1;
     }
     cache_delete(result);
+    printf("[DB] LoadContainersFromDatabase exit gSpawnContainerCount=%d", gSpawnContainerCount);
     return 1;
 }
-
-forward LoadLootsFromDatabase();
 LoadLootsFromDatabase()
 {
+    printf("[DB] LoadLootsFromDatabase enter");
     new i;
     for (i = 0; i < MAX_CONTAINER_TYPE_ID; i++)
     {
@@ -142,6 +150,7 @@ LoadLootsFromDatabase()
         print("No loot found in database");
         gLootRowCount = 0;
         cache_delete(result);
+        printf("[DB] LoadLootsFromDatabase exit early: zero rows");
         return 1;
     }
     if (rows > MAX_LOOTS)
@@ -189,50 +198,86 @@ LoadLootsFromDatabase()
     }
 
     cache_delete(result);
+    printf("[DB] LoadLootsFromDatabase exit gLootRowCount=%d", gLootRowCount);
     return 1;
 }
 
-forward EnqueuePendingLoot(const nick[], bool:lootIsModel, lootValue);
-EnqueuePendingLoot(const nick[], bool:lootIsModel, lootValue)
+// MySQL: CREATE TABLE IF NOT EXISTS `pending_rewards` (
+//   `player_nick` varchar(24) NOT NULL,
+//   `is_model` tinyint(1) NOT NULL,
+//   `value` int NOT NULL,
+//   KEY `player_nick` (`player_nick`)
+// ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+forward EnqueuePendingReward(const nick[], bool:rewardIsModel, rewardValue);
+EnqueuePendingReward(const nick[], bool:rewardIsModel, rewardValue)
 {
     if (nick[0] == '\0')
     {
-        printf("[EnqueuePendingLoot] empty nick, is_model=%d value=%d", _:lootIsModel, lootValue);
+        printf("[EnqueuePendingReward] empty nick, is_model=%d value=%d", _:rewardIsModel, rewardValue);
         return 0;
     }
     new q[192];
     mysql_format(connId, q, sizeof(q),
-        "INSERT INTO `pending_loots` (`player_nick`,`is_model`,`value`) VALUES ('%e', %d, %d)",
-        nick, _:lootIsModel, lootValue);
+        "INSERT INTO `pending_rewards` (`player_nick`,`is_model`,`value`) VALUES ('%e', %d, %d)",
+        nick, _:rewardIsModel, rewardValue);
+    printf("[EnqueuePendingReward] enter nick='%s' is_model=%d value=%d", nick, _:rewardIsModel, rewardValue);
     mysql_query(connId, q);
+    new err = mysql_errno(connId);
+    if (err)
+    {
+        new errstr[144];
+        mysql_error(errstr, sizeof(errstr), connId);
+        printf("[EnqueuePendingReward] mysql_errno=%d after INSERT: %s (errno 1146 = table `pending_rewards` missing in DB %s)", err, errstr, DataBase);
+    }
+    else
+    {
+        printf("[EnqueuePendingReward] INSERT ok nick='%s'", nick);
+    }
     return 1;
 }
 
-forward LoadAndApplyPendingLootsForPlayer(playerid);
-LoadAndApplyPendingLootsForPlayer(playerid)
+forward LoadAndApplyPendingRewardsForPlayer(playerid);
+LoadAndApplyPendingRewardsForPlayer(playerid)
 {
+    printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer enter playerid=%d", playerid);
     if (!IsPlayerConnected(playerid))
     {
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer abort: not connected playerid=%d", playerid);
         return 0;
     }
     new nick[MAX_PLAYER_NAME];
     GetPlayerName(playerid, nick, MAX_PLAYER_NAME);
     if (nick[0] == '\0')
     {
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer abort: empty nick from GetPlayerName playerid=%d", playerid);
         return 0;
     }
+    printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer nick='%s' playerid=%d", nick, playerid);
 
     new q[160];
     mysql_format(connId, q, sizeof(q),
-        "SELECT `is_model`, `value` FROM `pending_loots` WHERE `player_nick` = '%e'",
+        "SELECT `is_model`, `value` FROM `pending_rewards` WHERE `player_nick` = '%e'",
         nick);
 
+    printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer executing SELECT");
     new Cache:result = mysql_query(connId, q);
+    new err = mysql_errno(connId);
+    if (err)
+    {
+        new errstr[144];
+        mysql_error(errstr, sizeof(errstr), connId);
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer mysql_errno=%d after SELECT: %s (1146 = no table `pending_rewards` in DB %s)", err, errstr, DataBase);
+        cache_delete(result);
+        return 0;
+    }
     new rows;
     cache_get_row_count(rows);
+    printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer SELECT rows=%d nick='%s' playerid=%d", rows, nick, playerid);
     if (rows == 0)
     {
         cache_delete(result);
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer no rows, exit playerid=%d", playerid);
         return 1;
     }
 
@@ -242,27 +287,45 @@ LoadAndApplyPendingLootsForPlayer(playerid)
     {
         cache_get_value_name_bool(i, "is_model", isModel);
         cache_get_value_name_int(i, "value", prizeValue);
-        DeliverAuctionPrizeToPlayer(playerid, isModel, prizeValue);
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer row %d/%d is_model=%d value=%d -> DeliverAuctionRewardToPlayer playerid=%d",
+            i, rows, _:isModel, prizeValue, playerid);
+        DeliverAuctionRewardToPlayer(playerid, isModel, prizeValue);
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer row %d DeliverAuctionRewardToPlayer returned playerid=%d", i, playerid);
     }
     cache_delete(result);
 
     mysql_format(connId, q, sizeof(q),
-        "DELETE FROM `pending_loots` WHERE `player_nick` = '%e'",
+        "DELETE FROM `pending_rewards` WHERE `player_nick` = '%e'",
         nick);
+    printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer DELETE for nick='%s'", nick);
     mysql_query(connId, q);
+    err = mysql_errno(connId);
+    if (err)
+    {
+        new errstr[144];
+        mysql_error(errstr, sizeof(errstr), connId);
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer mysql_errno=%d after DELETE: %s", err, errstr);
+    }
+    else
+    {
+        printf("[PendingRewards] LoadAndApplyPendingRewardsForPlayer DELETE ok playerid=%d", playerid);
+    }
     return 1;
 }
 
 forward SpawnContainer(containerId);
 SpawnContainer(containerId)
 {
+    printf("[DB] SpawnContainer enter containerId=%d", containerId);
     if (containerId == -1)
     {
+        printf("[DB] SpawnContainer abort containerId=-1");
         print("Container id is -1");
         return 0;
     }
     if (containers[containerId][container_id] == -1)
     {
+        printf("[DB] SpawnContainer abort containerId=%d not loaded", containerId);
         printf("Container %d not found", containerId);
         return 0;
 
@@ -283,7 +346,8 @@ SpawnContainer(containerId)
 
 forward DestroyContainer(containerId);
 DestroyContainer(containerId)
-{    
+{
+    printf("[DB] DestroyContainer enter containerId=%d", containerId);
     DestroyObject(containers[containerId][object_id]);
     DestroyDynamicArea(containers[containerId][area_id]);
     Delete3DTextLabel(containers[containerId][label_id]);
@@ -293,19 +357,23 @@ DestroyContainer(containerId)
 
 forward SpawnAllContainers();
 SpawnAllContainers()
-{    
+{
+    printf("[DB] SpawnAllContainers enter gSpawnContainerCount=%d", gSpawnContainerCount);
     for(new i = 0; i < gSpawnContainerCount; i++)
     {
         SpawnContainer(i);
     }
+    printf("[DB] SpawnAllContainers exit");
 	return 1;
 }
 
 forward GetContainerIdByAreaId(playerId, areaId);
 GetContainerIdByAreaId(playerId, areaId)
 {
+    printf("[DB] GetContainerIdByAreaId enter playerId=%d areaId=%d", playerId, areaId);
     for(new i = 0; i < gSpawnContainerCount; i++){
         if(containers[i][area_id] == areaId){
+            printf("[DB] GetContainerIdByAreaId found slot=%d", i);
             return i;
         }
     }
@@ -313,23 +381,28 @@ GetContainerIdByAreaId(playerId, areaId)
     new str[64];
     format(str, sizeof(str), "Container not found for area id: %d", areaId);
     SendClientMessage(playerId, -1, str);
+    printf("[DB] GetContainerIdByAreaId miss areaId=%d", areaId);
     return -1;
 }
 
 GetLootChanceTotalByContainerType(containerType)
 {
+    printf("[DB] GetLootChanceTotalByContainerType enter containerType=%d", containerType);
     for (new i = 0; i < MAX_CONTAINER_TYPES; i++)
     {
         if (containerTypes[i] == containerType)
         {
+            printf("[DB] GetLootChanceTotalByContainerType slot=%d total=%d", i, LootChanceTotalByType[i]);
             return LootChanceTotalByType[i];
         }
     }
+    printf("[DB] GetLootChanceTotalByContainerType no slot for model %d -> -1", containerType);
     return -1;
 }
 
 GetRandomLootIdForContainerType(containerType)
 {
+    printf("[DB] GetRandomLootIdForContainerType enter containerType=%d", containerType);
     new total = GetLootChanceTotalByContainerType(containerType);
     if (total <= 0)
     {
