@@ -54,10 +54,10 @@ forward OnPlayerDisconnectForDrawables(playerid);
 OnPlayerDisconnectForDrawables(playerid)
 {
     playerCurrentContainer[playerid] = -1;
-    for (new j = 0; j < MAX_CONTAINERS; j++)
+    for (new i = 0; i < gSpawnContainerCount; i++)
     {
-        PlayerTextDrawDestroy(playerid, drawables[playerid][j]);
-        PlayerTextDrawDestroy(playerid, bidButtons[playerid][j]);
+        PlayerTextDrawDestroy(playerid, drawables[playerid][i]);
+        PlayerTextDrawDestroy(playerid, bidButtons[playerid][i]);
     }
     return 1;
 }

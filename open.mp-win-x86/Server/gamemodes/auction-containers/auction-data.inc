@@ -15,7 +15,7 @@ public StartAuction()
     SpawnAllContainers();
     auctionTimerFunction = SetTimer("AuctionTimerTick", 1000, true);
     gAuctionTimeLeft = AUCTION_COOLDOWN_SECONDS;
-    for(new i = 0; i < MAX_CONTAINERS; i++)
+    for(new i = 0; i < gSpawnContainerCount; i++)
     {
         gTotalBids[i] = 0;
         for(new j = 0; j < MAX_PLAYERS; j++)
@@ -35,7 +35,7 @@ public AuctionTimerTick()
     if (gAuctionTimeLeft <= 0)
     {
         printf("Auction ended");
-        for(new i = 0; i < MAX_CONTAINERS; i++)
+        for(new i = 0; i < gSpawnContainerCount; i++)
         {
             ProduceAuctionResult(i);
         }
@@ -60,7 +60,7 @@ ProduceAuctionResult(containerId)
 
 CanMakeBid(playerid, containerid, amount)
 {
-    if (containerid < 0 || containerid >= MAX_CONTAINERS)
+    if (containerid < 0 || containerid >= gSpawnContainerCount)
     {
         printf("[CanMakeBid] player %d invalid container slot %d", playerid, containerid);
         SendClientMessage(playerid, 0xFF6666FF, "This container is not available.");

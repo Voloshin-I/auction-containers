@@ -36,6 +36,7 @@ new containerTypes[MAX_CONTAINER_TYPES];
 // Sum of loot.chance per spawn `type` id (DB), not per slot j in containerTypes[]
 new LootChanceTotalByType[MAX_CONTAINER_TYPE_ID];
 new gLootRowCount;
+new gSpawnContainerCount;
 
 // Not the best hierarchy. ConnectToDatabase calls LoadDataFromDatabase.
 forward ConnectToDatabase();
@@ -81,8 +82,16 @@ LoadContainersFromDatabase()
     if (rows == 0)
     {
         print("No containers found in database");
+        gSpawnContainerCount = 0;
+        cache_delete(result);
         return 1;
     }
+    if (rows > MAX_CONTAINERS)
+    {
+        printf("WARNING: spawn_containers rows %d exceed MAX_CONTAINERS %d, truncating", rows, MAX_CONTAINERS);
+        rows = MAX_CONTAINERS;
+    }
+    gSpawnContainerCount = rows;
     printf("%d containers loaded", rows);
     for(new i = 0; i < rows; i++)
     {
@@ -108,7 +117,7 @@ LoadContainersFromDatabase()
         }
         
     }
-    for (new i = rows; i < MAX_CONTAINERS; i++)
+    for (new i = gSpawnContainerCount; i < MAX_CONTAINERS; i++)
     {
         containers[i][container_id] = -1;
     }
@@ -142,7 +151,7 @@ LoadLootsFromDatabase()
     }
     gLootRowCount = rows;
     printf("%d loots loaded", rows);
-    for (i = 0; i < rows; i++)
+    for (i = 0; i < gLootRowCount; i++)
     {
         printf("Loot %d: %s", i, loots[i][name]);
         cache_get_value_name_int(i, "id", loots[i][loot_id]);
@@ -215,7 +224,7 @@ DestroyContainer(containerId)
 forward SpawnAllContainers();
 SpawnAllContainers()
 {    
-    for(new i = 0; i < MAX_CONTAINERS; i++)
+    for(new i = 0; i < gSpawnContainerCount; i++)
     {
         SpawnContainer(i);
     }
@@ -225,7 +234,7 @@ SpawnAllContainers()
 forward GetContainerIdByAreaId(playerId, areaId);
 GetContainerIdByAreaId(playerId, areaId)
 {
-    for(new i = 0; i < MAX_CONTAINERS; i++){
+    for(new i = 0; i < gSpawnContainerCount; i++){
         if(containers[i][area_id] == areaId){
             return i;
         }

@@ -28,7 +28,7 @@ public OnPlayerConnect(playerid)
 {
     playerCurrentContainer[playerid] = -1;
     SendClientMessage(playerid, -1, "Hello from PAWN!");
-    for(new i = 0; i < MAX_CONTAINERS; i++)
+    for(new i = 0; i < gSpawnContainerCount; i++)
     {
         CreateContainerDrawableForPlayer(playerid, i);
     }
@@ -79,7 +79,7 @@ public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
 RestoreAuctionTextDrawAfterBidDialog(playerid)
 {
     new containerid = playerCurrentContainer[playerid];
-    if (containerid >= 0 && containerid < MAX_CONTAINERS && containers[containerid][container_id] != -1)
+    if (containerid >= 0 && containerid < gSpawnContainerCount && containers[containerid][container_id] != -1)
     {
         ShowContainerDrawableForPlayer(playerid, containerid);
     }
