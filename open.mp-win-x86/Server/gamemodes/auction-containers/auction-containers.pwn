@@ -26,6 +26,7 @@ public OnGameModeInit()
 
 public OnPlayerConnect(playerid)
 {
+    playerCurrentContainer[playerid] = -1;
     SendClientMessage(playerid, -1, "Hello from PAWN!");
     for(new i = 0; i < MAX_CONTAINERS; i++)
     {

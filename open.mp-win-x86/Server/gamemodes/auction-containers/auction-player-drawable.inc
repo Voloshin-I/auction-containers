@@ -54,13 +54,10 @@ forward OnPlayerDisconnectForDrawables(playerid);
 OnPlayerDisconnectForDrawables(playerid)
 {
     playerCurrentContainer[playerid] = -1;
-    for(new i = 0; i < MAX_PLAYERS; i++)
+    for (new j = 0; j < MAX_CONTAINERS; j++)
     {
-        for(new j = 0; j < MAX_CONTAINERS; j++)
-        {
-            PlayerTextDrawDestroy(i, drawables[i][j]);
-            PlayerTextDrawDestroy(i, bidButtons[i][j]);
-        }
+        PlayerTextDrawDestroy(playerid, drawables[playerid][j]);
+        PlayerTextDrawDestroy(playerid, bidButtons[playerid][j]);
     }
     return 1;
 }
