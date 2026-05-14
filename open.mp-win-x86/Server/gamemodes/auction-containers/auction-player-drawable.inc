@@ -171,14 +171,14 @@ FormatBids(containerid)
     }
 
     new line[128];
-    for(new i = 0; i < MAX_PLAYERS; i++)
+    for (new i = 0; i < MAX_PLAYERS; i++)
     {
         new playerBid = gBids[containerid][i];
         if (playerBid == 0) continue;
 
         new playerChance = playerBid * 100 / gTotalBids[containerid];
 
-        format(line, sizeof(line), "%s: %d$ (%d%%)~n~", gPlayerNames[i], playerBid, playerChance);
+        format(line, sizeof(line), "%s: %d$ (%d%%)~n~", participantNick[i], playerBid, playerChance);
         strcat(gDrawableStr, line, BID_DRAWABLE_STRING_LENGTH);
     }
     return 1;

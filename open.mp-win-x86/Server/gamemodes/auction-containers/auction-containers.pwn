@@ -40,6 +40,18 @@ public OnPlayerConnect(playerid)
     GetPlayerName(playerid, gPlayerNames[playerid], MAX_PLAYER_NAME);
     printf("[PendingRewards] OnPlayerConnect gPlayerNames cached='%s' playerid=%d (pending rewards load on spawn + short delay)", gPlayerNames[playerid], playerid);
 
+    new participantId = ResolveOrCreateParticipant(gPlayerNames[playerid]);
+    playerParticipant[playerid] = participantId;
+    if (participantId == -1)
+    {
+        printf("[Auction] OnPlayerConnect WARN playerid=%d no participant slot (max participants)", playerid);
+        SendClientMessage(playerid, 0xFF6666FF, "Auction participant list is full. You cannot bid this round.");
+    }
+    else
+    {
+        printf("[Auction] OnPlayerConnect playerid=%d -> participantId=%d nick='%s'", playerid, participantId, gPlayerNames[playerid]);
+    }
+
     GivePlayerMoney(playerid, 9999);
     printf("[PendingRewards] OnPlayerConnect exit playerid=%d", playerid);
     return 1;
@@ -60,6 +72,14 @@ public ApplyPendingRewardsTimer(playerid)
 public OnPlayerSpawn(playerid)
 {
     printf("[PendingRewards] OnPlayerSpawn playerid=%d -> schedule pending rewards apply in 750ms", playerid);
+    if (playerParticipant[playerid] == -1 && IsPlayerConnected(playerid))
+    {
+        new tmpNick[MAX_PLAYER_NAME];
+        GetPlayerName(playerid, tmpNick, MAX_PLAYER_NAME);
+        new partId = ResolveOrCreateParticipant(tmpNick);
+        playerParticipant[playerid] = partId;
+        printf("[Auction] OnPlayerSpawn late-bind playerid=%d -> participantId=%d nick='%s'", playerid, partId, tmpNick);
+    }
     SetTimerEx("ApplyPendingRewardsTimer", 750, false, "i", playerid);
     return 1;
 }
@@ -67,6 +87,7 @@ public OnPlayerSpawn(playerid)
 public OnPlayerDisconnect(playerid)
 {
     printf("[GM] OnPlayerDisconnect playerid=%d", playerid);
+    playerParticipant[playerid] = -1;
     OnPlayerDisconnectForDrawables(playerid);
     return 1;
 }
@@ -222,22 +243,44 @@ UpdateAllContainerDrawables()
     return 1;
 }
 
-OnPlayerWon(containerId, playerId, lootId, const winnerNick[])
+FindConnectedPlayerIdForParticipant(winnerParticipantId)
 {
-    printf("[OnPlayerWon] enter containerId=%d playerId=%d lootId=%d nick='%s'", containerId, playerId, lootId, winnerNick);
+    for (new i = 0; i < MAX_PLAYERS; i++)
+    {
+        if (IsPlayerConnected(i) && playerParticipant[i] == winnerParticipantId)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+OnPlayerWon(containerId, winnerParticipantId, lootId)
+{
+    if (winnerParticipantId < 0 || winnerParticipantId >= MAX_PLAYERS)
+    {
+        printf("[OnPlayerWon] invalid winnerParticipantId=%d", winnerParticipantId);
+        DestroyContainer(containerId);
+        return 1;
+    }
+    new winnerNick[MAX_PLAYER_NAME];
+    winnerNick[0] = EOS;
+    strmid(winnerNick, participantNick[winnerParticipantId], 0, MAX_PLAYER_NAME, MAX_PLAYER_NAME);
+    printf("[OnPlayerWon] enter containerId=%d winnerParticipantId=%d lootId=%d nick='%s'", containerId, winnerParticipantId, lootId, winnerNick);
     new bool:isModel = loots[lootId][is_model];
     printf("[OnPlayerWon] isModel=%d", _:isModel);
     new prizeVal = loots[lootId][value];
     printf("[OnPlayerWon] prizeVal=%d", prizeVal);
 
-    if (IsPlayerConnected(playerId))
+    new winnerPlayerId = FindConnectedPlayerIdForParticipant(winnerParticipantId);
+    if (winnerPlayerId != -1)
     {
-        printf("[OnPlayerWon] player online -> DeliverAuctionRewardToPlayer");
-        DeliverAuctionRewardToPlayer(playerId, isModel, prizeVal);
+        printf("[OnPlayerWon] online winner playerid=%d participantId=%d -> DeliverAuctionRewardToPlayer", winnerPlayerId, winnerParticipantId);
+        DeliverAuctionRewardToPlayer(winnerPlayerId, isModel, prizeVal);
     }
     else
     {
-        printf("[OnPlayerWon] player offline");
+        printf("[OnPlayerWon] no connected player for participantId=%d -> pending reward", winnerParticipantId);
         if (winnerNick[0] != '\0')
         {
             printf("[OnPlayerWon] EnqueuePendingReward nick='%s'", winnerNick);
@@ -245,7 +288,7 @@ OnPlayerWon(containerId, playerId, lootId, const winnerNick[])
         }
         else
         {
-            printf("[OnPlayerWon] offline winner slot %d has empty nick, cannot enqueue pending reward", playerId);
+            printf("[OnPlayerWon] empty winnerNick for participantId=%d, cannot enqueue pending reward", winnerParticipantId);
         }
     }
 
