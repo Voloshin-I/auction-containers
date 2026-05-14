@@ -168,14 +168,23 @@ LoadLootsFromDatabase()
         printf("Loot value: %d", loots[i][value]);
 
         new ct = loots[i][container_type];
-        if (ct >= 0 && ct < MAX_CONTAINER_TYPE_ID)
+        new slot = -1;
+        for (new j = 0; j < MAX_CONTAINER_TYPES; j++)
         {
-            LootChanceTotalByType[ct] += loots[i][chance];
-            printf("Loot chance total for type %d: %d", ct, LootChanceTotalByType[ct]);
+            if (containerTypes[j] == ct)
+            {
+                slot = j;
+                break;
+            }
+        }
+        if (slot != -1)
+        {
+            LootChanceTotalByType[slot] += loots[i][chance];
+            printf("Loot chance total for model %d (slot %d): %d", ct, slot, LootChanceTotalByType[slot]);
         }
         else
         {
-            printf("WARNING: loot row %d has type %d out of range [0, %d)", i, ct, MAX_CONTAINER_TYPE_ID);
+            printf("WARNING: loot row %d type %d does not match any loaded spawn_containers.type (model id)", i, ct);
         }
     }
 
@@ -307,15 +316,24 @@ GetContainerIdByAreaId(playerId, areaId)
     return -1;
 }
 
+GetLootChanceTotalByContainerType(containerType)
+{
+    for (new i = 0; i < MAX_CONTAINER_TYPES; i++)
+    {
+        if (containerTypes[i] == containerType)
+        {
+            return LootChanceTotalByType[i];
+        }
+    }
+    return -1;
+}
+
 GetRandomLootIdForContainerType(containerType)
 {
-    if (containerType < 0 || containerType >= MAX_CONTAINER_TYPE_ID)
-    {
-        return -1;
-    }
-    new total = LootChanceTotalByType[containerType];
+    new total = GetLootChanceTotalByContainerType(containerType);
     if (total <= 0)
     {
+        printf("[GetRandomLootIdForContainerType] total %d <= 0", total);
         return -1;
     }
     new randomChance = random(total);
@@ -326,9 +344,11 @@ GetRandomLootIdForContainerType(containerType)
             randomChance -= loots[i][chance];
             if (randomChance < 0)
             {
+                printf("[GetRandomLootIdForContainerType] found loot %d for container type %d", i, containerType);
                 return i;
             }
         }
     }
+    printf("[GetRandomLootIdForContainerType] no loot found for container type %d, gLootRowCount=%d, randomChance=%d, total=%d", containerType, gLootRowCount, randomChance, total);
     return -1;
 }

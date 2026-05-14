@@ -174,15 +174,20 @@ UpdateAllContainerDrawables()
 
 OnPlayerWon(containerId, playerId, lootId, const winnerNick[])
 {
+    printf("[OnPlayerWon] enter containerId=%d playerId=%d lootId=%d nick='%s'", containerId, playerId, lootId, winnerNick);
     new bool:isModel = loots[lootId][is_model];
+    printf("[OnPlayerWon] isModel=%d", _:isModel);
     new prizeVal = loots[lootId][value];
+    printf("[OnPlayerWon] prizeVal=%d", prizeVal);
 
     if (IsPlayerConnected(playerId))
     {
+        printf("[OnPlayerWon] player online -> deliver");
         DeliverAuctionPrizeToPlayer(playerId, isModel, prizeVal);
     }
     else
     {
+        printf("[OnPlayerWon] player offline");
         if (winnerNick[0] != '\0')
         {
             EnqueuePendingLoot(winnerNick, isModel, prizeVal);
@@ -193,6 +198,8 @@ OnPlayerWon(containerId, playerId, lootId, const winnerNick[])
         }
     }
 
+    printf("[OnPlayerWon] before DestroyContainer containerId=%d", containerId);
     DestroyContainer(containerId);
+    printf("[OnPlayerWon] after DestroyContainer containerId=%d", containerId);
     return 1;
 }

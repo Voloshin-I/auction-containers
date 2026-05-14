@@ -48,23 +48,30 @@ public AuctionTimerTick()
 forward ProduceAuctionResult(containerId);
 ProduceAuctionResult(containerId)
 {
+    printf("[ProduceAuctionResult] enter containerId=%d gSpawnContainerCount=%d", containerId, gSpawnContainerCount);
     new winnerId = GetWinner(containerId);
+    printf("[ProduceAuctionResult] containerId=%d winnerId=%d", containerId, winnerId);
     if (winnerId == -1)
         return 1;
 
-    new lootId = GetRandomLootIdForContainerType(containers[containerId][type]);
+    new t = containers[containerId][type];
+    printf("[ProduceAuctionResult] containerId=%d type=%d", containerId, t);
+    new lootId = GetRandomLootIdForContainerType(t);
+    printf("[ProduceAuctionResult] containerId=%d lootId=%d gLootRowCount=%d", containerId, lootId, gLootRowCount);
     if (lootId == -1)
     {
-        new t = containers[containerId][type];
-        new total = (t >= 0 && t < MAX_CONTAINER_TYPE_ID) ? LootChanceTotalByType[t] : -1;
-        printf("[ProduceAuctionResult] Invalid loot generated. containerId=%d, type=%d, gLootRowCount=%d, totalChance=%d, MAX_CONTAINER_TYPE_ID=%d",
-            containerId, t, gLootRowCount, total, MAX_CONTAINER_TYPE_ID);
+        new total = GetLootChanceTotalByContainerType(t);
+        printf("[ProduceAuctionResult] Invalid loot generated. containerId=%d, type=%d, gLootRowCount=%d, totalChance=%d",
+            containerId, t, gLootRowCount, total);
         return 1;
     }
     new winnerNick[MAX_PLAYER_NAME];
     winnerNick[0] = '\0';
+    printf("[ProduceAuctionResult] before strmid winnerId=%d MAX_PLAYER_NAME=%d", winnerId, MAX_PLAYER_NAME);
     strmid(winnerNick, gPlayerNames[winnerId], 0, MAX_PLAYER_NAME, MAX_PLAYER_NAME);
+    printf("[ProduceAuctionResult] after strmid winnerNick='%s'", winnerNick);
     OnPlayerWon(containerId, winnerId, lootId, winnerNick);
+    printf("[ProduceAuctionResult] after OnPlayerWon containerId=%d", containerId);
     return 1;
 }
 
