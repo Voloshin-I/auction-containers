@@ -55,8 +55,9 @@ ProduceAuctionResult(containerId)
     new lootId = GetRandomLootIdForContainerType(containers[containerId][type]);
     if (lootId == -1)
     {
-
-        printf("Invalid loot generated. Data problems,
+        new t = containers[containerId][type];
+        new total = (t >= 0 && t < MAX_CONTAINER_TYPE_ID) ? LootChanceTotalByType[t] : -1;
+        printf("[ProduceAuctionResult] Invalid loot generated. containerId=%d, type=%d, gLootRowCount=%d, totalChance=%d, MAX_CONTAINER_TYPE_ID=%d",
             containerId, t, gLootRowCount, total, MAX_CONTAINER_TYPE_ID);
         return 1;
     }
